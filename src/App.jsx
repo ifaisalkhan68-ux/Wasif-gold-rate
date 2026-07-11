@@ -171,23 +171,87 @@ export default function App() {
     saveRates({ ...rates, featured: key });
   };
 
+  const drawCornerFlourish = (ctx, x, y, rotateDeg) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((rotateDeg * Math.PI) / 180);
+    ctx.strokeStyle = "#caa646";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(4, 96);
+    ctx.quadraticCurveTo(4, 4, 96, 4);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(4, 70);
+    ctx.quadraticCurveTo(4, 30, 44, 30);
+    ctx.stroke();
+    ctx.fillStyle = "#e8c96a";
+    ctx.beginPath();
+    ctx.arc(96, 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(44, 30, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const drawCoinRow = (ctx, cx, y) => {
+    const sizes = [14, 18, 22, 26, 32, 26, 22, 18, 14];
+    const gap = 30;
+    const startX = cx - ((sizes.length - 1) * gap) / 2;
+    sizes.forEach((r, i) => {
+      const x = startX + i * gap;
+      const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
+      grad.addColorStop(0, "#fbe7a8");
+      grad.addColorStop(1, "#b8892c");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  };
+
+  const drawBadge = (ctx, cx, y, symbol, label) => {
+    ctx.save();
+    ctx.strokeStyle = "#caa646";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, y, 34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#e8c96a";
+    ctx.font = "28px Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(symbol, cx, y + 2);
+    ctx.textBaseline = "alphabetic";
+    ctx.font = "400 20px Georgia, serif";
+    ctx.fillStyle = "#cbb587";
+    const lines = label.split("\n");
+    lines.forEach((line, i) => {
+      ctx.fillText(line, cx, y + 60 + i * 24);
+    });
+    ctx.restore();
+  };
+
   const drawPoster = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const ctx = canvas.getContext("2d");
-    const W = 1080, H = 1500;
+    const W = 1080, H = 1780;
     canvas.width = W;
     canvas.height = H;
 
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#120d08");
-    bg.addColorStop(1, "#241708");
+    bg.addColorStop(0, "#241708");
+    bg.addColorStop(1, "#0a0704");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
+    // hero image
+    const imgH = 460;
     const img = imgRef.current;
     if (img && img.complete && img.naturalWidth) {
-      const imgH = 480;
       const scale = Math.max(W / img.naturalWidth, imgH / img.naturalHeight);
       const iw = img.naturalWidth * scale;
       const ih = img.naturalHeight * scale;
@@ -196,58 +260,132 @@ export default function App() {
       ctx.rect(0, 0, W, imgH);
       ctx.clip();
       ctx.drawImage(img, (W - iw) / 2, (imgH - ih) / 2, iw, ih);
-      const fade = ctx.createLinearGradient(0, imgH - 220, 0, imgH);
-      fade.addColorStop(0, "rgba(18,13,8,0)");
-      fade.addColorStop(1, "rgba(18,13,8,1)");
+      const fade = ctx.createLinearGradient(0, imgH - 200, 0, imgH);
+      fade.addColorStop(0, "rgba(10,7,4,0)");
+      fade.addColorStop(1, "rgba(10,7,4,1)");
       ctx.fillStyle = fade;
-      ctx.fillRect(0, imgH - 220, W, 220);
+      ctx.fillRect(0, imgH - 200, W, 200);
       ctx.restore();
     }
 
+    // heading over the hero image
+    ctx.textAlign = "center";
+    ctx.font = "700 52px Georgia, serif";
+    ctx.fillStyle = "#f2d98a";
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 14;
+    ctx.fillText(t.heading, W / 2, imgH - 40);
+    ctx.shadowBlur = 0;
+
+    // outer gold frame + corner flourishes
     ctx.strokeStyle = "#caa646";
     ctx.lineWidth = 6;
-    ctx.strokeRect(24, 24, W - 48, H - 48);
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+    drawCornerFlourish(ctx, 20, 20, 0);
+    ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1); drawCornerFlourish(ctx, 20, 20, 0); ctx.restore();
+    ctx.save(); ctx.translate(0, H); ctx.scale(1, -1); drawCornerFlourish(ctx, 20, 20, 0); ctx.restore();
+    ctx.save(); ctx.translate(W, H); ctx.scale(-1, -1); drawCornerFlourish(ctx, 20, 20, 0); ctx.restore();
 
-    ctx.fillStyle = "#e8c96a";
-    ctx.textAlign = "center";
-    ctx.font = "700 60px Georgia, serif";
-    ctx.fillText(t.heading, W / 2, 560);
+    let y = imgH + 50;
+
+    ctx.font = "400 26px Georgia, serif";
+    ctx.fillStyle = "#a8926a";
+    ctx.fillText(todayStr, W / 2, y);
+    y += 60;
+
+    drawCoinRow(ctx, W / 2, y);
+    y += 70;
+
+    // rate card
+    const cardTop = y;
+    const cardH = 340;
+    const cardPad = 60;
+    const cardGrad = ctx.createLinearGradient(0, cardTop, 0, cardTop + cardH);
+    cardGrad.addColorStop(0, "#1d1408");
+    cardGrad.addColorStop(1, "#0a0704");
+    ctx.fillStyle = cardGrad;
+    ctx.fillRect(cardPad, cardTop, W - cardPad * 2, cardH);
+    ctx.strokeStyle = "#caa646";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardPad, cardTop, W - cardPad * 2, cardH);
+    drawCornerFlourish(ctx, cardPad, cardTop, 0);
+    ctx.save(); ctx.translate(W - cardPad, cardTop); ctx.scale(-1, 1); drawCornerFlourish(ctx, 0, 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(cardPad, cardTop + cardH); ctx.scale(1, -1); drawCornerFlourish(ctx, 0, 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(W - cardPad, cardTop + cardH); ctx.scale(-1, -1); drawCornerFlourish(ctx, 0, 0, 0); ctx.restore();
+
+    const rateGrad = ctx.createLinearGradient(W / 2 - 260, 0, W / 2 + 260, 0);
+    rateGrad.addColorStop(0, "#cf9f3f");
+    rateGrad.addColorStop(0.5, "#fff2c4");
+    rateGrad.addColorStop(1, "#cf9f3f");
+    ctx.fillStyle = rateGrad;
+    ctx.font = "700 118px Georgia, serif";
+    ctx.fillText(featuredTola === "" ? "\u2014" : "Rs. " + formatNum(featuredTola), W / 2, cardTop + 155);
 
     ctx.font = "400 30px Georgia, serif";
     ctx.fillStyle = "#a8926a";
-    ctx.fillText(todayStr, W / 2, 605);
+    ctx.fillText(t.perTola, W / 2, cardTop + 205);
 
-    ctx.font = "700 140px Georgia, serif";
-    ctx.fillStyle = "#f5d878";
-    ctx.fillText(featuredTola === "" ? "--" : "Rs. " + formatNum(featuredTola), W / 2, 740);
-
-    ctx.font = "400 38px Georgia, serif";
+    ctx.font = "italic 400 34px Georgia, serif";
     ctx.fillStyle = "#cbb587";
-    ctx.fillText(t.perTola, W / 2, 795);
-
-    ctx.font = "400 32px Georgia, serif";
-    ctx.fillStyle = "#a8926a";
     ctx.fillText(
-      (featuredGram === "" ? "--" : "Rs. " + formatNum(featuredGram)) + " / " + t.perGram,
+      (featuredGram === "" ? "\u2014" : "Rs. " + formatNum(featuredGram)) + " / " + t.perGram,
       W / 2,
-      845
+      cardTop + 265
     );
 
-    ctx.font = "700 66px Georgia, serif";
+    y = cardTop + cardH + 80;
+
+    ctx.font = "700 62px Georgia, serif";
     ctx.fillStyle = "#e8c96a";
-    ctx.fillText(SHOP.name, W / 2, 1020);
+    ctx.fillText(SHOP.name, W / 2, y);
+    y += 50;
+
+    ctx.font = "italic 400 30px Georgia, serif";
+    ctx.fillStyle = "#a8926a";
+    ctx.fillText(t.tagline, W / 2, y);
+    y += 55;
+
+    // Urdu slogan — always shown, RTL script
+    ctx.direction = "rtl";
+    ctx.font = "400 36px 'Noto Nastaliq Urdu', Georgia, serif";
+    ctx.fillStyle = "#e6dcc3";
+    ctx.fillText(URDU_SLOGAN, W / 2, y);
+    ctx.direction = "ltr";
+    y += 45;
 
     ctx.strokeStyle = "#7a5c25";
     ctx.beginPath();
-    ctx.moveTo(W / 2 - 220, 1055);
-    ctx.lineTo(W / 2 + 220, 1055);
+    ctx.moveTo(W / 2 - 220, y);
+    ctx.lineTo(W / 2 + 220, y);
     ctx.stroke();
+    y += 80;
 
-    ctx.font = "400 32px Georgia, serif";
+    // badges row
+    const badgeGap = 210;
+    const badges = [
+      ["\u2666", t.pureGold],
+      ["\u2713", t.trusted],
+      ["\u2726", t.purity],
+      ["\u2696", t.bestRate],
+    ];
+    const badgeStartX = W / 2 - (badgeGap * (badges.length - 1)) / 2;
+    badges.forEach(([symbol, label], i) => {
+      drawBadge(ctx, badgeStartX + i * badgeGap, y, symbol, label);
+    });
+    y += 150;
+
+    ctx.strokeStyle = "#5c451f";
+    ctx.lineWidth = 2;
+    const phoneBoxW = 460;
+    ctx.strokeRect(W / 2 - phoneBoxW / 2, y, phoneBoxW, 70);
+    ctx.font = "700 38px Georgia, serif";
     ctx.fillStyle = "#e6dcc3";
-    ctx.fillText(SHOP.address, W / 2, 1120);
-    ctx.font = "700 42px Georgia, serif";
-    ctx.fillText("PH: " + SHOP.phone, W / 2, 1190);
+    ctx.fillText("PH: " + SHOP.phone, W / 2, y + 46);
+    y += 110;
+
+    ctx.font = "400 28px Georgia, serif";
+    ctx.fillStyle = "#cbb587";
+    ctx.fillText(SHOP.address, W / 2, y);
 
     return canvas;
   }, [featuredTola, featuredGram, t, todayStr]);
@@ -261,7 +399,10 @@ export default function App() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  const downloadPoster = () => {
+  const downloadPoster = async () => {
+    try {
+      await document.fonts.ready;
+    } catch (e) {}
     const canvas = drawPoster();
     if (!canvas) return;
     setTimeout(() => {
