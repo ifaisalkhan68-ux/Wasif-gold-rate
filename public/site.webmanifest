@@ -1,0 +1,12 @@
+{
+  "name": "Wasif Jewellers — Gold Rate Today",
+  "short_name": "Wasif Gold Rate",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#120d08",
+  "theme_color": "#caa646",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
